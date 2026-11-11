@@ -3,8 +3,27 @@ from requests import request, Response
 from .default_headers import default_headers
 
 
+def _to_api_params(params: dict) -> dict:
+    # Old parameter names (keyword, country, domain: "com") still work
+    result = dict(params)
+    keyword = result.pop("keyword", None)
+    country = result.pop("country", None)
+
+    if keyword is not None:
+        result.setdefault("q", keyword)
+
+    if country is not None:
+        result.setdefault("gl", str(country).lower())
+
+    domain = result.get("domain")
+    if domain and not str(domain).startswith("google."):
+        result["domain"] = f"google.{domain}"
+
+    return result
+
+
 class ScrapeitCloudClient:
-    api_url = "https://api.scrape-it.cloud/scrape/google/locals"
+    api_url = "https://api.hasdata.com/scrape/google-maps/search"
 
     def __init__(self, api_key: str):
         self.api_key = api_key
@@ -21,4 +40,10 @@ class ScrapeitCloudClient:
         headers.update(default_headers)
         params["source"] = "python_sdk"
 
-        return request("POST", self.api_url, data=params, headers=headers, **kwargs)
+        return request(
+            "GET",
+            self.api_url,
+            params=_to_api_params(params),
+            headers=headers,
+            **kwargs
+        )
